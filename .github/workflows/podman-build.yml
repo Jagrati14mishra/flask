@@ -1,0 +1,45 @@
+name: Build Flask App with Podman
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  # Uses GitHub-hosted runner
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Podman
+        run: |
+          sudo apt update
+          sudo apt install -y podman
+          podman --version  # Verify installation
+
+      - name: Configure Podman Rootless
+        run: |
+          export STORAGE_DRIVER=vfs
+          mkdir -p $HOME/.config/containers
+          echo -e "[engine]\ncgroup_manager = \"cgroupfs\"" > $HOME/.config/containers/containers.conf
+          podman info
+
+      - name: Build Flask App Image
+        run: |
+          podman build -t flask-app .
+          podman images  # List built images
+
+      - name: Save Image as Tar (Artifact)
+        run: |
+          podman save -o flask-app.tar localhost/flask-app
+          
+      - name: Upload Image Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: flask-app-image
+          path: flask-app.tar
