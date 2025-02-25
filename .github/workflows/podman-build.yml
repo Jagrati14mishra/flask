@@ -27,16 +27,37 @@ jobs:
 
       # Step 4: Build Flask App Image using Podman
       - name: Build Flask App Image
-        run: |
-          podman build -t flask-app -f Dockerfile .
+        run: podman build -t flask-app -f Dockerfile .
 
       # Step 5: Log in to Docker Hub using Podman
       - name: Log in to Docker Hub
+        env:
+          DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+          DOCKER_HUB_PASSWORD: ${{ secrets.DOCKER_HUB_PASSWORD }}
         run: |
-          echo "${{ secrets.DOCKER_HUB_PASSWORD }}" | podman login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin docker.io
+          echo "$DOCKER_HUB_PASSWORD" | podman login -u "$DOCKER_HUB_USERNAME" --password-stdin docker.io
 
       # Step 6: Tag and Push Image to Docker Hub
       - name: Tag and Push Image
+        env:
+          DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
         run: |
-          podman tag flask-app docker.io/${{ secrets.DOCKER_HUB_USERNAME
+          podman tag flask-app docker.io/$DOCKER_HUB_USERNAME/flask-app:latest
+          podman push docker.io/$DOCKER_HUB_USERNAME/flask-app:latest
+
+      # Step 7: Install Trivy for Security Scanning
+      - name: Install Trivy
+        run: |
+          sudo apt install -y wget
+          wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.51.2_Linux-64bit.deb
+          sudo dpkg -i trivy_0.51.2_Linux-64bit.deb
+          trivy --version
+
+      # Step 8: Scan the Image with Trivy
+      - name: Scan Image with Trivy
+        env:
+          DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+        run: |
+          trivy image docker.io/$DOCKER_HUB_USERNAME/flask-app:latest
+
 
