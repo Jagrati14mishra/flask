@@ -1,44 +1,42 @@
-name: Build Flask App with Podman
+name: Build and Push Flask App with Podman
 
 on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 jobs:
   build:
-    runs-on: ubuntu-latest  # Uses GitHub-hosted runner
+    runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout repository
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      # Step 2: Debug - List files in the repository to check Dockerfile location
+      - name: Debug - List Files in Runner
+        run: ls -R ${{ github.workspace }}
+
+      # Step 3: Install Podman
       - name: Install Podman
         run: |
           sudo apt update
           sudo apt install -y podman
-          podman --version  # Verify installation
+          podman --version
 
-      - name: Configure Podman Rootless
+      # Step 4: Build Flask App Image using Podman
+      - name: Build Flask App Image
         run: |
-          export STORAGE_DRIVER=vfs
-          mkdir -p $HOME/.config/containers
-          echo -e "[engine]\ncgroup_manager = \"cgroupfs\"" > $HOME/.config/containers/containers.conf
-          podman info
+          podman build -t flask-app -f Dockerfile .
 
-        - name: Build Flask App Image
-    run: podman build -t flask-app -f flask-docker-app/Dockerfile flask-docker-app/
-
-
-      - name: Save Image as Tar (Artifact)
+      # Step 5: Log in to Docker Hub using Podman
+      - name: Log in to Docker Hub
         run: |
-          podman save -o flask-app.tar localhost/flask-app
-          
-      - name: Upload Image Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: flask-app-image
-          path: flask-app.tar
+          echo "${{ secrets.DOCKER_HUB_PASSWORD }}" | podman login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin docker.io
+
+      # Step 6: Tag and Push Image to Docker Hub
+      - name: Tag and Push Image
+        run: |
+          podman tag flask-app docker.io/${{ secrets.DOCKER_HUB_USERNAME
+
