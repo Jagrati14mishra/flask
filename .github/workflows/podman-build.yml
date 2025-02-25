@@ -29,10 +29,9 @@ jobs:
           echo -e "[engine]\ncgroup_manager = \"cgroupfs\"" > $HOME/.config/containers/containers.conf
           podman info
 
-      - name: Build Flask App Image
-        run: |
-          podman build -t flask-app .
-          podman images  # List built images
+        - name: Build Flask App Image
+    run: podman build -t flask-app -f flask-docker-app/Dockerfile flask-docker-app/
+
 
       - name: Save Image as Tar (Artifact)
         run: |
